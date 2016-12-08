@@ -1,9 +1,18 @@
 (ns advent-of-code-2016.day1
   (:require [clojure.java.io :as io]
-            ))
+            [clojure.pprint :refer [pprint]]))
 
 (def directions
   (.split (.trim (slurp (io/resource "day1-input1"))) ",\\s?"))
+
+(defn expand-directions
+  [dirs]
+  (reduce (fn [a [d & n]]
+            (let [d (keyword (str d))
+                  n (Integer/parseInt (apply str n))]
+              (apply conj a d (repeat (dec n) :F))))
+          []
+          dirs))
 
 (comment "Down/South is positive, Right/East is positive")
 
@@ -14,7 +23,8 @@
 
 (def turn
   {:L {:N :W :S :E :E :N :W :S}
-   :R {:N :E :S :W :E :S :W :N}})
+   :R {:N :E :S :W :E :S :W :N}
+   :F {:N :N :S :S :E :E :W :W}})
 
 (def init
   {:dir :N
@@ -22,11 +32,25 @@
 
 (defn move
   [{:keys [dir xy]} direction]
-  (let [next-dir ((turn (keyword (str (first direction)))) (keyword dir))]
+  (let [next-dir ((turn direction) dir)]
     {:dir next-dir
-     :xy (map + xy (map #(* (Integer/parseInt (apply str (rest direction))) %) (next-dir moves)))}))
+     :xy (map + xy (next-dir moves))}))
 
-(def final-pos
-  (reduce move init directions))
+(def positions
+  (reductions move init (expand-directions directions)))
 
-(println (+ (first (:xy final-pos)) (second (:xy final-pos))))
+(defn distance [pos]
+  (reduce + (map #(Math/abs %) pos)))
+
+(println  (distance (:xy (last positions))))
+
+(defn first-duplicate-position
+  [positions]
+  (reduce (fn [acc i]
+            (if (some #{(:xy i)} acc)
+              (reduced (:xy i))
+              (conj acc (:xy i))))
+          #{}
+          positions))
+
+(println (distance (first-duplicate-position positions)))
